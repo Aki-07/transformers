@@ -278,18 +278,16 @@ class DecisionTransformerGPT2Block(GradientCheckpointingLayer):
         encoder_hidden_states: torch.Tensor | None = None,
         encoder_attention_mask: torch.FloatTensor | None = None,
         use_cache: bool | None = False,
-        output_attentions: bool | None = False,
         **kwargs,
-    ) -> tuple[torch.Tensor] | tuple[torch.Tensor, tuple[torch.FloatTensor, ...]] | None:
+    ) -> torch.Tensor:
         residual = hidden_states
         hidden_states = self.ln_1(hidden_states)
-        attn_output, self_attn_weights = self.attn(
+        attn_output, _ = self.attn(
             hidden_states,
             past_key_values=past_key_values,
             cache_position=cache_position,
             attention_mask=attention_mask,
             use_cache=use_cache,
-            output_attentions=output_attentions,
             **kwargs,
         )
         # residual connection
@@ -304,13 +302,12 @@ class DecisionTransformerGPT2Block(GradientCheckpointingLayer):
                 )
             residual = hidden_states
             hidden_states = self.ln_cross_attn(hidden_states)
-            cross_attn_output, cross_attn_weights = self.crossattention(
+            cross_attn_output, _ = self.crossattention(
                 hidden_states,
                 past_key_values=past_key_values,
                 attention_mask=attention_mask,
                 encoder_hidden_states=encoder_hidden_states,
                 encoder_attention_mask=encoder_attention_mask,
-                output_attentions=output_attentions,
             )
             # residual connection
             hidden_states = residual + cross_attn_output
@@ -321,13 +318,7 @@ class DecisionTransformerGPT2Block(GradientCheckpointingLayer):
         # residual connection
         hidden_states = residual + feed_forward_hidden_states
 
-        outputs = (hidden_states,)
-        if output_attentions:
-            outputs += (self_attn_weights,)
-            if encoder_hidden_states is not None:
-                outputs += (cross_attn_weights,)
-
-        return outputs
+        return hidden_states
 
 
 @auto_docstring
